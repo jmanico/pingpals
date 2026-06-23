@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-Guidance for Claude Code working in this repository. Keep it compact; do not duplicate the imported documents below — they are the source of truth.
+Operating rules for Claude Code here. Do not duplicate the imported documents below — they are the source of truth.
 
 ## Project imports
 
-These define what the system must do, how it is built, its security contract, and its brand. Read and obey them; **REQUIREMENTS.md wins** on any conflict.
+Read and obey all four. **REQUIREMENTS.md wins** on any conflict.
 
 @REQUIREMENTS.md
 @ARCHITECTURE.md
@@ -17,7 +17,7 @@ Pingpals is a single-user relationship-cadence reminder **web + API application*
 
 ## Bootstrap status
 
-The repository is in **bootstrap mode**: no implementation exists yet — only these planning documents. The stack is fixed (see ARCHITECTURE.md, which owns the stack decision); most infrastructure is `TO BE DECIDED` (see ARCHITECTURE.md). When a rule depends on an undecided choice, keep that choice behind an interface, default to the most restrictive option, and raise the open decision — do **not** invent the infrastructure.
+**Bootstrap mode**: no implementation exists yet. Stack is fixed and infrastructure is mostly `TO BE DECIDED` (ARCHITECTURE.md owns both). When a rule depends on an undecided choice, keep it behind an interface, default to the most restrictive option, and raise the open decision — do **not** invent the infrastructure.
 
 ## Working style
 
@@ -30,7 +30,7 @@ The repository is in **bootstrap mode**: no implementation exists yet — only t
 
 ## GitHub issues — mandatory
 
-**Every new GitHub issue MUST follow `REQUIREMENT_TEMPLATE.md`** so each issue is a structured, testable requirement (metadata, scope, security context, standards alignment, acceptance criteria, failure behavior, test strategy, dependencies). Issues that are not framed as a requirement in this template are out of process.
+**Every new GitHub issue MUST follow `REQUIREMENT_TEMPLATE.md`** (structured, testable requirement). Issues not framed against this template are out of process.
 
 ## Definition of done
 
@@ -38,14 +38,14 @@ A change is complete only when it:
 
 1. Satisfies its requirement tag and the SECURITY.md rules in scope.
 2. Has tests covering the relevant TEST-1.x cases (security/privacy/engine), meeting the ≥80% coverage gate.
-3. Passes the CI gates defined by TEST-1.6 / SEC-9.2 once they exist.
+3. Passes the CI gates (TEST-1.6 / SEC-9.2) once they exist.
 
 ## Workflow placeholders (undecided)
 
-These are not yet defined for this repo. Do not assume them; ask or leave as placeholders.
+Not yet defined. Do not assume them; ask or leave as placeholders.
 
 - `[PLACEHOLDER: build / run / test commands]` — no project tooling exists yet.
 - `[PLACEHOLDER: branching & PR conventions]` — beyond "new issues use REQUIREMENT_TEMPLATE.md".
-- `[PLACEHOLDER: CI pipeline configuration]` — gates are required (SEC-9.x, TEST-1.6) but not yet implemented.
+- `[PLACEHOLDER: CI pipeline configuration]` — gates required (SEC-9.x, TEST-1.6), not yet implemented.
 - `[PLACEHOLDER: directory / module layout]` — no source tree exists yet.
 - `[PLACEHOLDER: infrastructure choices]` — owned by ARCHITECTURE.md's `TO BE DECIDED` list.
