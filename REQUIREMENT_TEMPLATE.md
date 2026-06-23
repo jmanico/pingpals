@@ -13,7 +13,8 @@
 ## Requirement
 - **Description**: [Single-sentence, unambiguous statement of what the system MUST do. Use RFC 2119 keywords: MUST, MUST NOT, SHALL, SHOULD, MAY.]
 - **Rationale**: [Why this requirement exists - business, regulatory, or threat-driven justification.]
-
+- **Design**: Use DESIGN.md to figure out the rigjht design for this feature, if needed.
+  
 ## Scope
 - **Applies To**: [Web App | API | Both]
 - **Components**: [e.g., Authentication Service, Transaction API, Account Portal]
