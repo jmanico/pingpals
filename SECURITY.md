@@ -8,12 +8,10 @@
 **Companion documents:** [REQUIREMENTS.md](./REQUIREMENTS.md) (what the system must do), [ARCHITECTURE.md](./ARCHITECTURE.md) (how it is built), [DESIGN.md](./DESIGN.md) (look and feel).
 **Primary references:** OWASP Top 10 Proactive Controls, OWASP Cheat Sheet Series, OWASP API Security Top 10, OWASP REST Security Cheat Sheet, OWASP AISVS, and the standards already anchored in REQUIREMENTS.md §13 (RFC 9700, RFC 9068, NIST SP 800-207, NIST SP 800-53 Rev. 5, GDPR, FIPS 203, TLS 1.3).
 
-> This is the secure-coding contract for any code added to this repository. It compresses the
-> project's own requirements plus authoritative public references into short, high-signal rules an
-> AI coding agent (and humans) can apply while writing Flask/React code. It is the security peer to
-> the other three documents. **REQUIREMENTS.md remains the source of truth; where this document and
-> REQUIREMENTS.md disagree, REQUIREMENTS.md wins.** Rules paraphrase their sources — consult the
-> cited requirement tag or reference for full detail before relying on an edge case.
+> This is the secure-coding contract for any code added to this repository. **REQUIREMENTS.md
+> remains the source of truth; where this document and REQUIREMENTS.md disagree, REQUIREMENTS.md
+> wins.** Rules paraphrase their sources — consult the cited requirement tag or reference for full
+> detail before relying on an edge case.
 
 ---
 
@@ -30,32 +28,26 @@
 
 ## Required Security Inputs
 
-What is **fixed** today (from ARCHITECTURE.md and REQUIREMENTS.md), and therefore binding on all code:
+What is **fixed** today and therefore binding on all code. The stack identity (Flask/REST,
+React 19 client-only, Docker) is owned by ARCHITECTURE.md; the security-relevant qualifiers below
+are authored here:
 
-- **Backend:** Python **Flask**, **REST** API, stateless behind cookie sessions, TLS 1.3 only.
-- **Frontend:** **React 19**, client-only (no SSR, no Node APIs), function components + hooks, Zod
-  validation, strict CSP.
+- **Backend:** Flask/REST stack (ARCHITECTURE.md) — stateless behind cookie sessions, **TLS 1.3 only**.
+- **Frontend:** React 19 client-only stack (ARCHITECTURE.md) — Zod validation, **strict CSP**.
 - **Auth:** OIDC (Google) SSO + **WebAuthn/passkey** + **MFA**; no password-only path. OAuth
-  Authorization Code + PKCE (S256) for all providers.
+  Authorization Code + PKCE (S256) for all providers (`SEC-1.x`, `INT-1.x`).
 - **Posture:** **Zero Trust** (NIST SP 800-207), fail-closed by default, per-request authorization,
-  strict per-user tenant isolation, encryption at rest, crypto-agility.
+  strict per-user tenant isolation, encryption at rest, crypto-agility (REQUIREMENTS.md §7–§8).
 - **Privacy:** **GDPR is in play** — the system processes personal data of third-party data subjects
   (the contacts) who are not users. Consent, DSR, erasure cascade, retention, and a DPIA before
-  launch are mandatory.
-- **Packaging:** **Docker** container image, cloud-portable.
+  launch are mandatory (REQUIREMENTS.md §7).
+- **Packaging:** Docker container image, cloud-portable (ARCHITECTURE.md).
 
-What is still **needed** before these rules can fully harden (mirrors ARCHITECTURE.md `TO BE DECIDED`).
-Until each is decided, code MUST keep the choice behind an interface and default to the most
-restrictive option:
-
-- Database engine and schema realization. — `TO BE DECIDED`
-- Durable queue / broker for reminder enqueue, retry, dead-letter. — `TO BE DECIDED`
-- In-app/push delivery mechanism and provider. — `TO BE DECIDED`
-- Managed key store / KMS vendor (interface-abstracted, no proprietary lock-in in MVP). — `TO BE DECIDED`
-- Hosting cloud, region, and data residency (bounds cross-border transfer obligations). — `TO BE DECIDED`
-- Orchestration (plain Docker vs. Kubernetes). — `TO BE DECIDED`
-- Hybrid post-quantum key exchange support (depends on chosen platform/providers). — `TO BE DECIDED`
-- Direct third-party (contact) erasure intake and identity verification. — `TO BE DECIDED`
+Infrastructure decisions (database engine, queue/broker, push provider, KMS vendor,
+hosting/region/residency, orchestration, hybrid post-quantum key exchange) are owned by
+ARCHITECTURE.md and remain `TO BE DECIDED`. Until each is resolved, code MUST keep the choice behind
+an interface and default to the most restrictive option. Direct third-party (contact) erasure intake
+and identity verification is an open decision tracked under `PRIV-1.4` (REQUIREMENTS.md §14).
 
 ---
 
@@ -106,6 +98,8 @@ infrastructure is chosen.
   (`SEC-2.3`, ARCH Rule 3).
 - The React client MUST NOT make authorization or data-scoping decisions; it presents what the API
   returns. All security invariants are enforced server-side (ARCH Rule 1).
+- Enforce object- and function-level authorization on **every** endpoint (no BOLA/BFLA); reject
+  cross-user object access with not-found/forbidden (`SEC-2.2`, OWASP API Security Top 10).
 
 ### 4. Input validation & output handling
 
@@ -116,6 +110,9 @@ infrastructure is chosen.
   untrusted strings (`SEC-4.2`).
 - On the client, all form input and all API response data MUST be validated with **Zod** before use
   (`FE-1.2`).
+- Reject unknown fields and **never mass-assign**; bound all input. REST endpoints are JSON only,
+  set `Content-Type` explicitly, and never echo unvalidated input into responses
+  (OWASP API Security Top 10, REST Security Cheat Sheet).
 - **Outreach URLs MUST pass an allowlist scheme validator before reaching any sink.** Allowed:
   `mailto`, `tel`, `sms`, `https` (restricted to the click-to-chat host, e.g. `wa.me`), and the
   Signal scheme. Anything else (e.g. `javascript:`, `data:`) MUST resolve to the safe fallback `"#"`.
@@ -157,14 +154,22 @@ infrastructure is chosen.
 
 - Third-party dependencies MUST be **minimized and vetted** (CVE history, maintenance, transitive
   footprint) before introduction (`SEC-9.1`, ARCH Rule 10).
-- CI MUST run **SAST, SCA, secret-scanning, and dependency checks**, and MUST **block merge** on
-  failure or on newly introduced high-severity findings (`SEC-9.2`, `TEST-1.6`).
+- CI MUST run the full **TEST-1.6** gate set — **SAST, SCA, secret-scanning, and dependency
+  checks** — and MUST **block merge** on failure or on newly introduced high-severity findings.
+  `TEST-1.6` is the canonical, operative gate list; `SEC-9.2`'s narrower "SCA and static analysis"
+  is a subset of it.
 - Generate an **SBOM**; pin dependency versions with **integrity verification** (`SEC-9.3`).
 - **Docker image hardening:** run as a **non-root** user, use a minimal/pinned base image, install no
   build toolchain into the runtime layer, bake in no secrets, and keep the image free of debug
-  servers (Flask debug mode MUST be off in any non-dev image).
-- Cloud, orchestrator, region, and KMS deployment specifics are `TO BE DECIDED`; until chosen, keep
-  them behind interfaces and default to least privilege and least exposure.
+  servers.
+- **Flask hardening:** `debug=False` in any non-dev build (never expose the Werkzeug debugger/PIN);
+  set a strong, secret `SECRET_KEY` from the secret store (never hard-coded), rotate per `SEC-3.x`;
+  rely on Jinja autoescaping (`SEC-4.2`).
+- **Code quality (CI gate):** keep low cyclomatic/cognitive complexity and clear separation of
+  concerns (isolate I/O, validation, and business logic); maintain ≥80% statement coverage
+  (`TEST-1.1`).
+- Cloud, orchestrator, region, and KMS deployment specifics are `TO BE DECIDED` (ARCHITECTURE.md);
+  until chosen, keep them behind interfaces and default to least privilege and least exposure.
 
 ### 9. GDPR & privacy-by-default
 
@@ -196,80 +201,6 @@ infrastructure is chosen.
 
 ---
 
-## Prompt Placeholders To Resolve
-
-The stack is identified in ARCHITECTURE.md, so five of six placeholders resolve to concrete rule
-sets; deployment is partial because cloud/orchestrator/region/KMS remain `TO BE DECIDED`.
-
-### `{{CODE_QUALITY_PROMPT}}` — *Resolved (default)*
-Keep **low cyclomatic and low cognitive complexity** and clear **separation of concerns**. Small,
-single-responsibility functions; isolate I/O, validation, and business logic; no security-relevant
-branch buried in a deeply nested path. Maintain ≥80% statement coverage as a CI gate (`TEST-1.1`).
-
-### `{{API_SECURITY_PROMPT}}` — *Resolved (REST confirmed)*
-Apply the **OWASP API Security Top 10** and **REST Security Cheat Sheet**, compressed:
-- Enforce object- and function-level authorization on every endpoint (no BOLA/BFLA); reject
-  cross-user object access with not-found/forbidden (`SEC-2.2`).
-- Validate and bound all input; reject unknown fields; never mass-assign.
-- Use correct HTTP methods/status codes; disable verbose errors; no internal IDs leaked.
-- Rate-limit and resource-cap sensitive endpoints (`SEC-6.1`).
-- JSON only; set `Content-Type` explicitly; never echo unvalidated input into responses.
-
-### `{{BACKEND_FRAMEWORK_PROMPT}}` — *Resolved (Flask confirmed)*
-Flask web-security essentials, compressed:
-- `debug=False` in any non-dev build; never expose the Werkzeug debugger/PIN.
-- Set a strong, secret `SECRET_KEY` from the secret store (never hard-coded); rotate per `SEC-3.x`.
-- Cookies: `Secure`, `HttpOnly`, `SameSite` (`SESSION_COOKIE_*`) — see Rule 2.
-- Rely on Jinja autoescaping; never disable it or render untrusted strings as markup (`SEC-4.2`).
-- Validate request bodies/params against explicit schemas; reject on failure (`FR-1.4`, `SEC-4.1`).
-- Apply security headers and CSP at the response layer (Rule 1).
-
-### `{{FRONTEND_FRAMEWORK_PROMPT}}` — *Resolved (React 19 confirmed)*
-React 19 secure-by-default, compressed (REQUIREMENTS.md §9):
-- `dangerouslySetInnerHTML` MUST NOT be used (`FE-1.1`).
-- Every `href`/`src` passes `validateAndSanitizeUrl`, returning `"#"` on failure (`FE-1.3`).
-- Do not spread props onto DOM nodes (`FE-1.5`); do not use array-index keys for dynamic lists —
-  use `crypto.randomUUID` when no stable domain id exists (`FE-1.6`).
-- Guard `useEffect` data fetches against races with `AbortController`/ignore flag and clean up on
-  unmount (`FE-1.7`).
-- Validate all props/API data with Zod (`FE-1.2`); keep the app CSP-friendly (`FE-1.4`).
-
-### `{{AUTH_PROMPT}}` — *Resolved (auth model confirmed)*
-**OWASP Authentication & Session Management** cheat sheets, plus **RFC 9700** (OAuth BCP) and
-**WebAuthn**, compressed:
-- WebAuthn/passkeys + MFA; no password-only path (`SEC-1.1`).
-- Sessions in HttpOnly/Secure/SameSite cookies, idle+absolute lifetimes, server-revocable (`SEC-1.x`).
-- OAuth Code+PKCE S256, exact redirect-URI match, `state`+`iss` validation, refresh rotation with
-  family revocation (`INT-1.x`).
-- Tokens never in URLs/logs/script-accessible storage (`INT-1.6`).
-
-### `{{DEPLOYMENT_PROMPT}}` — *Partially resolved (Docker confirmed; cloud `TO BE DECIDED`)*
-**Container hardening + OWASP CI/CD security**, compressed:
-- Docker image: non-root user, minimal pinned base, no secrets baked in, no debug servers (Rule 8).
-- CI gates: SAST, SCA, secret-scan, dependency check, SBOM, pinned + integrity-verified deps; block
-  on new high-severity (`SEC-9.x`, `TEST-1.6`).
-- Cloud provider, orchestration (Docker vs. k8s), region/data residency, and managed KMS vendor are
-  `TO BE DECIDED` (ARCHITECTURE.md). Keep them interface-abstracted; default to least privilege and
-  least exposure until decided.
-
----
-
-## Selected Prompt Imports
-
-Per the prompt, the rule sets selected above derive from these drivers:
-
-| Driver | Source in repo | Selected import / rule-set | Status |
-| --- | --- | --- | --- |
-| Architecture decisions | ARCHITECTURE.md Initial Architecture + Dependency Rules | Zero Trust (NIST SP 800-207), fail-closed, per-request authz, tenant isolation | Resolved |
-| Backend framework | ARCHITECTURE.md "Server framework: Python Flask" | Flask web-security guide (compressed) | Resolved |
-| Frontend framework | ARCHITECTURE.md / REQUIREMENTS.md §9 "React 19" | React 19 secure-by-default rules (`FE-1.x`) | Resolved |
-| Auth model | ARCHITECTURE.md / REQUIREMENTS.md §6.1, §8.1 | OWASP AuthN + Session Mgmt cheat sheets, RFC 9700, WebAuthn | Resolved |
-| API style | ARCHITECTURE.md "API style: REST" | OWASP API Security Top 10 + REST Security Cheat Sheet | Resolved |
-| Deployment model | ARCHITECTURE.md "Docker; cloud TBD" | Container hardening + OWASP CI/CD security; cloud / orchestrator / region / KMS `TO BE DECIDED` | Partial — `TO BE DECIDED` |
-| Code quality | Cross-cutting (`TEST-1.1`) | Low cyclomatic/cognitive complexity, separation of concerns | Resolved (default) |
-
----
-
 ## Standards Traceability
 
 | Rule group | External references | Project anchors (REQUIREMENTS.md §13) |
@@ -288,13 +219,11 @@ Per the prompt, the rule sets selected above derive from these drivers:
 
 ## Open Security Items
 
-- The eight `TO BE DECIDED` inputs in **Required Security Inputs** above must be resolved before the
+- The infrastructure `TO BE DECIDED` inputs owned by ARCHITECTURE.md must be resolved before the
   corresponding rules can move from provisional to enforced.
-- A **DPIA** (Art. 35) and a documented **Legitimate Interests Assessment** MUST be completed before
-  production launch, given systematic processing that includes non-user data subjects
-  (`PRIV-1.11`, REQUIREMENTS.md §14).
-- Direct third-party (contact) erasure intake and identity verification remain an open decision
-  (`PRIV-1.4`, REQUIREMENTS.md §14). Default for now: controller-mediated erasure (the user deletes
-  the contact) plus a manual DSR process.
-- Hosting region / data residency drives cross-border transfer obligations (`PRIV-1.12`) and is
-  unresolved.
+- **DPIA** (Art. 35) and a documented **Legitimate Interests Assessment** before production launch —
+  required of record by `PRIV-1.11` (REQUIREMENTS.md §14).
+- Direct third-party (contact) erasure intake and identity verification — open decision of record at
+  `PRIV-1.4` (REQUIREMENTS.md §14).
+- Hosting region / data residency and cross-border transfer obligations — `PRIV-1.12`
+  (REQUIREMENTS.md §14).

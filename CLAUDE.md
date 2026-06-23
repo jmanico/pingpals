@@ -13,20 +13,20 @@ These define what the system must do, how it is built, its security contract, an
 
 ## What this is
 
-Pingpals is a single-user relationship-cadence reminder **web + API application**. It nudges the account owner to stay in touch with people they track, at a per-relationship cadence. It never acts on third-party platforms — it delivers a reminder to the user plus a validated deep link to open the user's own messaging app.
+Pingpals is a single-user relationship-cadence reminder **web + API application**. See REQUIREMENTS.md §1–§2 for the product definition, scope, and the non-actor boundary.
 
 ## Bootstrap status
 
-The repository is in **bootstrap mode**: no implementation exists yet — only these planning documents. Architecture is fixed on stack (Flask REST API, React 19 client-only SPA, Docker), but most infrastructure is `TO BE DECIDED` (see ARCHITECTURE.md and SECURITY.md). When a rule depends on an undecided choice, keep that choice behind an interface, default to the most restrictive option, and raise the open decision — do **not** invent the infrastructure.
+The repository is in **bootstrap mode**: no implementation exists yet — only these planning documents. The stack is fixed (see ARCHITECTURE.md, which owns the stack decision); most infrastructure is `TO BE DECIDED` (see ARCHITECTURE.md). When a rule depends on an undecided choice, keep that choice behind an interface, default to the most restrictive option, and raise the open decision — do **not** invent the infrastructure.
 
 ## Working style
 
 - **Read before you write.** A change must satisfy the relevant FR/SEC/PRIV/INT/FE/NFR tag. Cite the tag in commit messages and PR descriptions.
-- **Fail closed.** If you cannot satisfy a security or privacy invariant, stop and surface it rather than shipping the weaker path.
-- **Reject over sanitize.** Validate every inbound edge against an explicit schema; reject on failure.
+- **Fail closed.** If you cannot satisfy a security or privacy invariant, stop and surface it rather than shipping the weaker path (SEC-2.3).
+- **Reject over sanitize** (SEC-4.1/FR-1.4; see SECURITY.md §4).
 - **No new infrastructure decisions** without explicit human sign-off. Surface `TO BE DECIDED` items; don't resolve them silently.
-- **Minimize dependencies.** Each new third-party library needs CVE / maintenance / transitive-footprint review before introduction (SEC-9.x).
-- **Design tokens only** for styling; no hard-coded colors or sizes (DESIGN.md §7.1).
+- **Minimize dependencies** — vet each new library per SEC-9.x (see SECURITY.md §8).
+- **Design tokens only** for styling (see DESIGN.md §7.1).
 
 ## GitHub issues — mandatory
 
@@ -38,7 +38,7 @@ A change is complete only when it:
 
 1. Satisfies its requirement tag and the SECURITY.md rules in scope.
 2. Has tests covering the relevant TEST-1.x cases (security/privacy/engine), meeting the ≥80% coverage gate.
-3. Passes the CI gates (SAST, SCA, secret-scan, dependency check) once those gates exist.
+3. Passes the CI gates defined by TEST-1.6 / SEC-9.2 once they exist.
 
 ## Workflow placeholders (undecided)
 
@@ -48,4 +48,4 @@ These are not yet defined for this repo. Do not assume them; ask or leave as pla
 - `[PLACEHOLDER: branching & PR conventions]` — beyond "new issues use REQUIREMENT_TEMPLATE.md".
 - `[PLACEHOLDER: CI pipeline configuration]` — gates are required (SEC-9.x, TEST-1.6) but not yet implemented.
 - `[PLACEHOLDER: directory / module layout]` — no source tree exists yet.
-- `[PLACEHOLDER: database, queue, push, KMS, hosting]` — all `TO BE DECIDED`.
+- `[PLACEHOLDER: infrastructure choices]` — owned by ARCHITECTURE.md's `TO BE DECIDED` list.

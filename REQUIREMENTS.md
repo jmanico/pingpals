@@ -237,7 +237,7 @@ The architecture follows Zero Trust per NIST SP 800-207 and fails closed by defa
 ### 8.9 Dependency and supply chain
 
 - **SEC-9.1** Third-party dependencies MUST be minimized. Each new dependency MUST be vetted for known CVEs, maintenance status, and transitive dependency footprint before introduction.
-- **SEC-9.2** CI MUST run software composition analysis and static analysis. Builds MUST fail on newly introduced high-severity findings.
+- **SEC-9.2** CI MUST run software composition analysis and static analysis. Builds MUST fail on newly introduced high-severity findings. (TEST-1.6 is the operative, fuller CI-gate list — SAST, SCA, secret scanning, and dependency checks — of which this is a subset.)
 - **SEC-9.3** A software bill of materials MUST be generated, and dependency versions MUST be pinned with integrity verification.
 
 ---
