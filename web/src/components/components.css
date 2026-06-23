@@ -67,3 +67,17 @@
   color: var(--color-purple-700);
   text-decoration: underline;
 }
+
+/* List reset used by screens — no inline styles (strict CSP forbids inline style attrs). */
+.pp-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.pp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
