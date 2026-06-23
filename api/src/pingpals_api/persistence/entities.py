@@ -66,6 +66,9 @@ SCHEMA: dict[str, EntitySpec] = {
         _i("id"), _i("owner_id"),
         _r("display_name"), _r("email", nullable=True), _r("phone", nullable=True),
         _i("category_id"), _r("notes", nullable=True),
+        _i("provider", nullable=True), _i("provider_id", nullable=True),  # import dedup (INT-4.2)
+        _i("last_contacted_at", nullable=True),  # cadence clock (FR-4.2)
+        _i("cadence_override_days", nullable=True),  # per-contact override (FR-3.2)
     )),
     "category": EntitySpec("category", owner_scoped=True, fields=(
         _i("id"), _i("owner_id"), _r("name"), _i("default_cadence_id", nullable=True),
