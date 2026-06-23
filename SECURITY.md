@@ -37,10 +37,15 @@ are authored here:
 - **Privacy:** **GDPR is in play** — the system processes personal data of third-party data subjects
   (the contacts) who are not users. Consent, DSR, erasure cascade, retention, and a DPIA before
   launch are mandatory (REQUIREMENTS.md §7).
-- **Packaging:** Docker container image, cloud-portable (ARCHITECTURE.md).
+- **Packaging:** Docker container image (official slim base, digest-pinned, non-root), cloud-portable (ARCHITECTURE.md).
+- **Datastore:** PostgreSQL (behind a repository interface), also backing server-side revocable sessions (`SEC-1.3`).
+- **Push:** standard Web Push with the application's own VAPID keys + RFC 8291 message-level payload encryption; fail closed (no push) if message-level protection is unavailable (`FR-5.6`, `FR-6.5`).
+- **Crypto / PQ posture:** migration-ready classical baseline (TLS 1.3 + crypto-agility + key rotation); no post-quantum algorithm committed, adoptable later without caller changes (`SEC-5.3`, `SEC-5.4`).
+- **CI:** GitHub Actions running the `TEST-1.6` gate set via a provider-agnostic, scriptable definition (`SEC-9.2`).
 
-Infrastructure decisions (database, queue/broker, push provider, KMS, hosting/region/residency,
-orchestration, hybrid PQ key exchange) are owned by ARCHITECTURE.md and remain `TO BE DECIDED`;
+Remaining infrastructure decisions (queue/broker, KMS vendor, transactional email provider, SMS
+provider, audit-chain external anchor store, hosting/region/residency, orchestration) are owned by
+ARCHITECTURE.md and remain `TO BE DECIDED`;
 until resolved, code MUST keep the choice behind an interface and default to the most restrictive
 option.
 
@@ -276,8 +281,10 @@ option.
 - **Code quality (CI gate):** keep low cyclomatic/cognitive complexity and clear separation of
   concerns (isolate I/O, validation, and business logic); maintain ≥80% statement coverage
   (`TEST-1.1`).
-- Cloud, orchestrator, region, and KMS deployment specifics are `TO BE DECIDED` (ARCHITECTURE.md);
-  until chosen, keep them behind interfaces and default to least privilege and least exposure.
+- Cloud, region, orchestrator, KMS vendor, queue/broker, and the email/SMS providers remain
+  `TO BE DECIDED` (ARCHITECTURE.md); until chosen, keep them behind interfaces and default to least
+  privilege and least exposure. (Resolved: PostgreSQL datastore, Web Push + VAPID/RFC 8291, GitHub
+  Actions CI, CycloneDX SBOM, digest-pinned non-root slim base image.)
 
 ### 9. GDPR & privacy-by-default
 
@@ -327,7 +334,11 @@ option.
 
 ## Open Security Items
 
-Open items are of record in REQUIREMENTS.md §14: infrastructure `TO BE DECIDED` inputs
-(ARCHITECTURE.md); DPIA + Legitimate Interests Assessment before launch (`PRIV-1.11`); direct
-third-party erasure intake and identity verification (`PRIV-1.4`); hosting region / data residency
-and cross-border transfer (`PRIV-1.12`).
+Open items are of record in REQUIREMENTS.md §14. Still open/deferred: the remaining infrastructure
+`TO BE DECIDED` inputs — KMS vendor, queue/broker, transactional email provider, SMS provider,
+audit-chain external anchor store, orchestrator (ARCHITECTURE.md); DPIA + Legitimate Interests
+Assessment and qualified-advisor sign-off before launch (`PRIV-1.11`, `PRIV-1.1`); future
+cross-user/identity-verified direct third-party erasure intake beyond the MVP controller-mediated
+model (`PRIV-1.4`); and hosting region / data residency and cross-border transfer mechanism
+(`PRIV-1.12`), whose deferral blocks finalizing processor DPAs. The operational alerting
+destination is deferred behind an alerting abstraction.

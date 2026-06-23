@@ -26,8 +26,11 @@ Data model expectations: Per-user isolated data set. Core entities: User, Contac
   Cadence (interval days + optional preferred day/send window), Reminder, ConsentRecord,
   ContactEvent (last-contact log), OutreachAction, ProviderToken (encrypted), AuditLogEntry.
   Data classes and minimization rules are owned by REQUIREMENTS.md §3, §6.4, PRIV-1.7.
-Deployment model: Docker container (cloud-portable; runs on many clouds). Specific
-  orchestrator/cloud TO BE DECIDED.
+Database: PostgreSQL, behind a repository interface (engine not coupled to any one cloud).
+  Also backs server-side revocable sessions (SEC-1.3) in MVP.
+Deployment model: Docker container (official slim base, digest-pinned, non-root; cloud-portable;
+  runs on many clouds). Specific orchestrator and cloud/region remain TO BE DECIDED (deferred,
+  cloud-agnostic; see REQUIREMENTS.md §14).
 ```
 
 ---
@@ -58,16 +61,24 @@ Control rules live in SECURITY.md; tags in parentheses are the REQUIREMENTS.md l
   present AND no active snooze (FR-5.1). Idempotent generation, fails closed on unknown
   timezone, caps reminders per user per window, horizontally scalable by user shard
   (FR-3.3, FR-5.2, SEC-6.2, NFR-1.1 — see SECURITY.md §7).
-- **Delivery worker.** Sends to the user via email and in-app/push (MVP). Per-channel
-  affirmative consent required, retries + dead-letter, minimal payload (display name,
-  channel, outreach action only) (FR-5.4, FR-6.2, NFR-1.2 — see SECURITY.md §9).
+- **Delivery worker.** Sends to the user via email, in-app/push, SMS, WhatsApp, and Signal in
+  MVP, each behind a per-channel sender interface (concrete email and SMS providers deferred;
+  Signal is self-hosted signal-cli, best-effort, off by default; WhatsApp enforces opt-in +
+  Cloud API session/template constraints). Per-channel affirmative consent required, retries +
+  dead-letter, minimal/confidentiality-aware payload (FR-5.4, FR-5.6, FR-6.1, FR-6.2, INT-5.x,
+  NFR-1.2 — see SECURITY.md §9). Web push uses the application's own VAPID keys + RFC 8291
+  payload encryption; a channel that cannot apply message-level protection fails closed.
 - **Outreach-link service.** Builds deep links (`mailto`, `tel`, `sms`, `https` wa.me,
   Signal) behind an allowlist validator; the system never transmits into those platforms
   (FR-6.3, FR-6.4, SEC-4.3 — see SECURITY.md §4).
-- **Integration adapters.** Google People (contacts read, least scope) in MVP; transactional
-  email provider. Each independently revocable; tokens purged on disconnect/erasure
-  (FR-1.5, INT-1.7, SEC-3.3 — see SECURITY.md §5). Later: Microsoft Graph, CardDAV, calendar,
-  SMS/WhatsApp/Signal.
+- **Integration adapters.** MVP: contacts read (least scope) from Google People, Microsoft
+  Graph, CardDAV, and Apple Contacts (iCloud over CardDAV); Google Calendar read-only
+  (free/busy) for meeting-aware cadence; Gmail metadata-only last-contact detection (opt-in,
+  default off, headers only); transactional email provider (deferred behind interface); SMS
+  (provider deferred), WhatsApp (Cloud API), and Signal (self-hosted signal-cli) delivery
+  adapters. Each independently revocable; tokens/credentials purged on disconnect/erasure
+  (FR-1.5, FR-4.3/4.4, INT-1.7, INT-3.1, INT-4.x, INT-5.x, SEC-3.3 — see SECURITY.md §5).
+  Later: calendar event creation; additional mailbox-detection providers.
 - **Privacy/DSR subsystem.** Consent records, machine-readable export, hard-delete erasure
   cascade, automated retention job, privacy-by-default (PRIV-1.2, 1.5, 1.6, 1.9, 1.13 — see
   SECURITY.md §9).
@@ -79,10 +90,10 @@ Control rules live in SECURITY.md; tags in parentheses are the REQUIREMENTS.md l
 ```
 [React 19 SPA] --REST/TLS1.3--> [Flask API] --+--> [AuthN/Session: OIDC + passkey/MFA]
       |  validateAndSanitizeUrl on hrefs       |
-      |                                         +--> [Scheduler] --> [Delivery worker] --> user (email, push/in-app)
+      |                                         +--> [Scheduler] --> [Delivery worker] --> user (email, push/in-app, SMS, WhatsApp, Signal)
    opens deep link in                          |
    user's own app  <--- outreach link ---------+--> [Outreach-link service (allowlist)]
-                                               +--> [Integration adapters: Google People, email] (least-privilege OAuth)
+                                               +--> [Integration adapters: Google People / MS Graph / CardDAV / Apple contacts, Google Calendar (free/busy), Gmail metadata detection, email, SMS, WhatsApp, Signal] (least-privilege OAuth / scoped creds)
                                                +--> [Privacy/DSR: consent, export, erasure, retention]
                                                +--> [Persistence + KMS + tamper-evident audit log]
 ```
@@ -92,18 +103,30 @@ Control rules live in SECURITY.md; tags in parentheses are the REQUIREMENTS.md l
 - `[ASSUMPTION]` Scheduler + Delivery worker run as background processes alongside the Flask
   API; whether they share or split container images is a deployment detail, not yet decided.
 - `[ASSUMPTION]` Reminder enqueue uses a durable queue between Scheduler and Delivery worker
-  (needed for idempotency/retry/dead-letter, FR-5.2/NFR-1.2). Concrete queue is TBD.
-- `[ASSUMPTION]` In-app/push delivery uses standard web push; exact mechanism TBD.
+  (needed for idempotency/retry/dead-letter, FR-5.2/NFR-1.2). Concrete broker remains TO BE
+  DECIDED (deferred); kept behind a queue interface defaulting to reject-unauthenticated.
+- In-app/push delivery uses standard Web Push with the application's own VAPID keys and RFC 8291
+  message-level payload encryption (RESOLVED); no proprietary push SDK. Kept behind a PushSender
+  interface that fails closed (no push) if message-level protection cannot be guaranteed.
 - `[ASSUMPTION]` "Many clouds" implies no hard dependency on a single cloud's proprietary
-  service in MVP; managed KMS is abstracted behind an interface.
+  service in MVP; managed KMS is abstracted behind an interface (KMS vendor deferred,
+  default-deny).
 
-**Explicitly NOT chosen here (no input given):**
+**Resolved here:**
 
-- Data store / database engine — `TO BE DECIDED` (only the entities and isolation rules are
-  fixed by REQUIREMENTS.md, not the engine).
-- Queue/broker, cache, push provider, managed KMS vendor, hosting cloud/region,
-  orchestration (k8s vs. plain Docker) — all `TO BE DECIDED`.
-- Data residency / cross-border transfer region — `TO BE DECIDED` (open question, §14).
+- Data store / database engine — **PostgreSQL** (behind a repository interface; also backs
+  server-side revocable sessions).
+- In-app/push mechanism — **standard Web Push (own VAPID keys + RFC 8291 payload encryption)**,
+  provider-agnostic, behind a PushSender interface.
+- Container base — **official slim image, digest-pinned, non-root**.
+
+**Explicitly deferred (kept behind interfaces, default to most-restrictive):**
+
+- Durable queue/broker, cache, managed KMS vendor, transactional email provider, SMS provider,
+  audit-chain external anchor store — all `TO BE DECIDED`.
+- Hosting cloud/region, data residency / cross-border transfer mechanism, and orchestration
+  (k8s vs. plain Docker) — all `TO BE DECIDED` (open questions, §14). Deferral of the region
+  blocks finalizing processor DPAs (PRIV-1.12).
 
 ---
 
@@ -115,25 +138,34 @@ Control rules live in SECURITY.md; tags in parentheses are the REQUIREMENTS.md l
 | API service (REST, per-request authz, tenant isolation) | SEC-2.x, SEC-4.x, SEC-6.1, FR-1.4 |
 | AuthN/Session (OIDC + passkey/MFA, OAuth baseline) | SEC-1.x, INT-1.x |
 | Scheduler | FR-3.x, FR-5.1, FR-5.2, NFR-1.1, SEC-6.2 |
-| Delivery worker (email + in-app/push MVP) | FR-6.1, FR-6.2, FR-5.4, FR-7.x, NFR-1.2 |
+| Delivery worker (email, in-app/push, SMS, WhatsApp, Signal — MVP) | FR-6.1, FR-6.2, FR-5.4, FR-5.6, FR-7.x, INT-5.x, NFR-1.2 |
 | Outreach-link service (scheme allowlist) | FR-6.3, FR-6.4, SEC-4.3 |
-| Integration adapters (Google People, email) | FR-1.5, INT-2.x, INT-4.x |
+| Integration adapters (Google People / MS Graph / CardDAV / Apple contacts, Google Calendar free/busy, Gmail metadata detection, email, SMS/WhatsApp/Signal) | FR-1.5, FR-4.3/4.4, INT-2.x, INT-3.1, INT-4.x, INT-5.x |
 | Privacy/DSR subsystem | PRIV-1.x, FR-1.3 |
 | Persistence + KMS + audit log | SEC-3.x, SEC-5.x, SEC-8.x, §3 data classification |
 | Contact/Category/Cadence data model | FR-1.x, FR-2.x, FR-3.x, FR-4.x |
 | Packaging (Docker) | NFR-1.1 (horizontal scale), human-provided deployment input |
 
-**Requirements needing more architecture input (`TO BE DECIDED`):**
+**Resolved (recorded above and in REQUIREMENTS.md):**
 
-- Database engine and schema realization for the data model (§3, §5). — `TO BE DECIDED`
+- Database engine and schema realization for the data model (§3, §5). — **PostgreSQL**.
+- In-app/push delivery mechanism (FR-6.1). — **Web Push, own VAPID + RFC 8291**.
+- Hybrid post-quantum key exchange (SEC-5.4). — **Migration-ready classical baseline** (TLS 1.3
+  + crypto-agility + rotation); no PQ algorithm committed, adoptable later without caller changes.
+- Contact providers, Google Calendar read-only, Gmail metadata detection, and SMS/WhatsApp/Signal
+  delivery are promoted into MVP (§2.1, INT-3.1, INT-4.x, INT-5.x).
+- Direct third-party (contact) erasure (PRIV-1.4). — MVP is **controller-mediated** + documented
+  manual DSR; cross-user/identity-verified intake remains a deferred decision (§14).
+
+**Still needing input / deferred (`TO BE DECIDED`, behind interfaces):**
+
 - Durable queue / broker for reminder enqueue, retry, dead-letter (FR-5.2, NFR-1.2). — `TO BE DECIDED`
-- In-app/push delivery mechanism and provider (FR-6.1). — `TO BE DECIDED`
 - Managed key store / KMS selection for SEC-3.1 / SEC-5.x. — `TO BE DECIDED`
+- Transactional email provider (INT-2.1) and SMS provider (INT-5.1). — `TO BE DECIDED`
+- Audit-chain external anchor store (SEC-8.5). — `TO BE DECIDED`
 - Hosting cloud, region, and data residency for cross-border transfer (PRIV-1.12, §14). — `TO BE DECIDED`
-- Hybrid post-quantum key exchange support (SEC-5.4) — depends on chosen platform/providers. — `TO BE DECIDED`
-- Later-phase integrations (Microsoft Graph, CardDAV, calendar, SMS/WhatsApp/Signal delivery)
-  (§2.2, INT-3.x, INT-5.x). — `TO BE DECIDED`
-- Direct third-party (contact) erasure intake and identity verification (PRIV-1.4, §14). — `TO BE DECIDED`
+- Orchestration (k8s vs. plain Docker). — `TO BE DECIDED`
+- Future cross-user/identity-verified third-party erasure intake (PRIV-1.4, §14). — `TO BE DECIDED`
 
 ---
 

@@ -22,22 +22,22 @@ The system does not act as the user on third-party platforms. It delivers the re
 ### 2.1 In scope (MVP)
 
 - Manual contact creation and edit.
-- Contact import from one provider (Google People API) at least-privilege scope.
+- Contact import at least-privilege contacts-read scope from Google People API, Microsoft Graph, CardDAV, and Apple Contacts (Apple realized as iCloud over CardDAV; no first-party server contacts API).
 - Relationship categorization with shipped defaults and user-defined categories.
 - Per-category and per-contact cadence configuration.
 - Manual last-contact logging.
+- Opt-in automatic last-contact detection from Gmail message **metadata/headers only** (never message bodies); default off; user may disable and purge all derived data at any time (FR-4.4). The added processing and its residual risk are recorded in the DPIA/LIA (PRIV-1.11, PRIV-1.1).
 - Reminder engine (cadence evaluation and scheduling).
-- Reminder delivery to the user via email and in-app or push.
+- Calendar **read-only (free/busy) for meeting-aware cadence** from Google Calendar (INT-3.1). No calendar event creation in MVP.
+- Reminder delivery to the user via email, in-app or push, SMS, WhatsApp, and Signal. SMS, WhatsApp, and Signal are subject to the per-channel constraints of INT-5.x; Signal is a self-hosted, best-effort channel that MUST NOT be presented as officially supported (INT-5.3) and is off by default.
 - One-tap outreach actions via validated deep links (mailto, tel, sms, WhatsApp click-to-chat, Signal).
 - GDPR core: consent records, data export, erasure, retention enforcement.
 - Security baseline per Section 8.
 
 ### 2.2 In scope (later phases)
 
-- Additional contact providers (Microsoft Graph, CardDAV, Apple Contacts).
-- Reminder delivery to the user via SMS, WhatsApp, and Signal.
-- Calendar read for meeting-aware cadence, and optional calendar event creation.
-- Opt-in automatic last-contact detection from mailbox metadata.
+- Calendar **event creation** (optional; MVP is calendar read-only) (INT-3.2).
+- Additional mailbox-detection providers beyond Gmail (for example Microsoft Graph mail metadata).
 
 ### 2.3 Out of scope
 
@@ -83,7 +83,7 @@ The system does not act as the user on third-party platforms. It delivers the re
 - **FR-1.2** The system MUST allow edit and deletion of any contact owned by the user.
 - **FR-1.3** Deletion of a contact MUST remove all associated personal data, reminders, and outreach history within the same transaction. Verification: a post-deletion query returns no rows for that contact across all tables.
 - **FR-1.4** The system MUST validate all contact fields against an explicit schema and MUST reject invalid input rather than coercing it (reject over sanitize). Verification: an invalid phone or email is rejected with a field-level error and no partial write occurs.
-- **FR-1.5** Contact import MUST request the minimum provider scope required to read contacts and MUST NOT request write or send scopes during import.
+- **FR-1.5** Contact import MUST request the minimum provider scope required to read contacts and MUST NOT request write or send scopes during import. MVP import providers are Google People, Microsoft Graph, CardDAV, and Apple Contacts (Apple realized as iCloud over CardDAV); each MUST use only its contacts-read scope and import only the fields permitted by INT-4.2. For CardDAV-based providers that authenticate by app-specific password rather than OAuth, the credential MUST be transported only over TLS and stored encrypted at rest per Section 8.3.
 
 ### 5.2 Relationship categorization
 
@@ -102,8 +102,8 @@ The system does not act as the user on third-party platforms. It delivers the re
 
 - **FR-4.1** The system MUST allow the user to log a contact event (mark as contacted) with a timestamp defaulting to now.
 - **FR-4.2** Logging a contact event MUST reset the cadence clock for that contact.
-- **FR-4.3** Automatic last-contact detection from mailbox metadata is later phase and MUST be opt-in per FR-4.4.
-- **FR-4.4** If automatic detection is enabled, the system MUST request a read scope limited to message metadata (headers) only, MUST NOT read message bodies, and MUST allow the user to disable it and purge all derived data at any time.
+- **FR-4.3** Automatic last-contact detection from mailbox metadata is in MVP scope for Gmail and MUST be opt-in and default off per FR-4.4. Additional mailbox-detection providers (for example Microsoft Graph mail metadata) are later phase. The added processing and its residual privacy risk MUST be recorded in the DPIA and Legitimate Interests Assessment (PRIV-1.11, PRIV-1.1).
+- **FR-4.4** If automatic detection is enabled, the system MUST request a read scope limited to message metadata (headers) only (for Gmail, the `gmail.metadata` scope), MUST NOT read message bodies, and MUST allow the user to disable it and purge all derived data at any time. Detection MUST default to off (privacy by default, PRIV-1.13) and MUST require affirmative, recorded consent for the optional processing (PRIV-1.2) before any mailbox is read.
 
 ### 5.5 Reminder engine
 
@@ -116,7 +116,7 @@ The system does not act as the user on third-party platforms. It delivers the re
 
 ### 5.6 Multi-channel delivery
 
-- **FR-6.1** The system MUST support delivery of the reminder to the user via email and in-app or push in MVP. SMS, WhatsApp, and Signal delivery to the user are later phase.
+- **FR-6.1** The system MUST support delivery of the reminder to the user via email, in-app or push, SMS, WhatsApp, and Signal in MVP. Each non-email/push channel is subject to its per-channel constraints in INT-5.x: SMS requires inbound webhook signature verification (INT-5.1); WhatsApp requires the user's in-WhatsApp opt-in and respects the Cloud API session/template constraints (INT-5.2); Signal is a self-hosted, best-effort channel that MUST NOT be presented as officially supported (INT-5.3) and is off by default. Every channel is gated by per-channel consent (FR-6.2) and the per-channel concrete provider MAY be deferred behind the delivery interface (the SMS provider in particular is undecided; see §14).
 - **FR-6.2** For each enabled channel the system MUST hold an affirmative, recorded consent for that channel. Absence of consent MUST fail closed (no delivery on that channel).
 - **FR-6.3** Each reminder MUST offer one or more outreach actions implemented as deep links: mailto, tel, sms, WhatsApp click-to-chat (`https://wa.me`), and Signal. The system MUST NOT transmit any message into these platforms itself.
 - **FR-6.4** Every outreach URL MUST pass an allowlist-based URL validator before rendering. Allowed schemes: `mailto`, `tel`, `sms`, `https` (restricted to the click-to-chat host), and the Signal scheme. For the `https` scheme the host MUST match a preregistered click-to-chat host allowlist (for example `wa.me`) by exact string comparison; suffix, substring, or wildcard host matching MUST NOT be used, so a lookalike such as `wa.me.evil.example` is rejected. Any contact-derived component (phone, handle) MUST be schema-validated and percent-encoded before insertion and MUST NOT be able to alter the scheme, host, or authority of the resulting URL; if it would, the URL MUST be rejected. Any other scheme or non-allowlisted host MUST be rejected and replaced with a safe fallback of `"#"`. Verification: a `javascript:` or `data:` scheme URL never reaches the DOM as an href, and an `https://wa.me.evil.example/...` lookalike-host URL is rejected to `"#"`.
@@ -149,24 +149,24 @@ All third-party integrations MUST conform to RFC 9700 (OAuth 2.0 Security Best C
 ### 6.2 Email integration
 
 - **INT-2.1** MVP email delivery to the user MAY use a transactional email provider over an authenticated API. Provider credentials MUST be stored per Section 8.3.
-- **INT-2.2** If a user mailbox is connected (later phase), scope MUST be limited to send for outreach assist, or metadata read for detection, and MUST NOT default to full mailbox read.
+- **INT-2.2** If a user mailbox is connected for last-contact detection (Gmail in MVP per FR-4.3), scope MUST be limited to message metadata read (for Gmail, `gmail.metadata`) and MUST NOT default to full mailbox read or request message-body access. Any later send-for-outreach-assist scope remains later phase and MUST be separately consented.
 - **INT-2.3** The domain used to send reminder email to the user MUST be protected against sender spoofing so recipients can authenticate that the mail originates from Pingpals. SPF MUST be published, all reminder mail MUST be DKIM-signed, and the sending domain MUST publish a DMARC policy of `p=reject` with SPF and DKIM identifier alignment. A reminder-only domain has no legitimate third-party senders, so `reject` is the fail-closed default; `quarantine` MAY be used only as a temporary, time-boxed rollout step. Verification: legitimate reminder mail passes SPF and DKIM with DMARC alignment, and mail from an unaligned or unsigned source claiming the Pingpals sending domain fails DMARC and is rejected by a conformant receiver.
 
-### 6.3 Calendar integration (later phase)
+### 6.3 Calendar integration
 
-- **INT-3.1** Calendar read MUST be limited to free/busy or the event metadata necessary for meeting-aware cadence. Event content beyond what is required MUST NOT be stored.
-- **INT-3.2** Any event the system creates MUST be clearly attributed to Pingpals and MUST be deletable by the user.
+- **INT-3.1** Calendar read for meeting-aware cadence is in MVP scope for Google Calendar and MUST be limited to free/busy or the event metadata necessary for meeting-aware cadence. Event content beyond what is required MUST NOT be stored.
+- **INT-3.2** Calendar event creation is later phase (MVP is calendar read-only). If implemented, any event the system creates MUST be clearly attributed to Pingpals and MUST be deletable by the user.
 
 ### 6.4 Contacts integration
 
-- **INT-4.1** Contact read MUST use the provider contacts read scope only.
+- **INT-4.1** Contact read MUST use the provider contacts read scope only. MVP providers are Google People, Microsoft Graph, CardDAV, and Apple Contacts (Apple realized as iCloud over CardDAV). OAuth providers (Google, Microsoft) MUST follow the INT-1.x baseline; CardDAV providers that authenticate by app-specific password MUST transport the credential only over TLS and store it encrypted per Section 8.3, and MUST NOT request any scope beyond contacts read.
 - **INT-4.2** Imported fields MUST be limited to name, phone, email, and a stable provider id for deduplication. The system MUST NOT import unrelated profile data.
 
-### 6.5 Messaging delivery to the user (later phase)
+### 6.5 Messaging delivery to the user
 
-- **INT-5.1** SMS delivery MUST verify inbound webhook signatures from the SMS provider before processing any callback.
-- **INT-5.2** WhatsApp delivery to the user requires the user to have opted in within WhatsApp, and MUST respect the session and template message constraints of the WhatsApp Cloud API.
-- **INT-5.3** Signal has no sanctioned multi-tenant sending API. Signal delivery, if implemented, MUST be treated as a self-hosted single-user integration (e.g. signal-cli on infrastructure the user controls), MUST be labeled best effort, and MUST NOT be presented as an officially supported channel (see §14).
+- **INT-5.1** SMS delivery is in MVP scope and MUST verify inbound webhook signatures from the SMS provider before processing any callback (SEC-7.1). The concrete SMS provider is undecided and is kept behind the delivery interface (see §14); the signature-verification contract MUST be enforced regardless of provider.
+- **INT-5.2** WhatsApp delivery to the user is in MVP scope, requires the user to have opted in within WhatsApp, and MUST respect the session (24-hour window) and template-message constraints of the WhatsApp Cloud API. Reminders sent outside an open session window MUST use a pre-approved template. The concrete WhatsApp Business/Cloud API account is kept behind the delivery interface.
+- **INT-5.3** Signal has no sanctioned multi-tenant sending API. Signal delivery is in MVP scope only as a self-hosted single-user integration (e.g. signal-cli on infrastructure the user controls), MUST be labeled best effort, MUST default off, and MUST NOT be presented as an officially supported channel.
 
 ---
 
@@ -177,7 +177,7 @@ Pingpals processes personal data of third-party data subjects (the contacts) who
 - **PRIV-1.1** The controller MUST document a lawful basis for processing contact personal data. The expected basis is legitimate interests under Article 6(1)(f), supported by a documented Legitimate Interests Assessment. User account data is processed under contract, Article 6(1)(b).
 - **PRIV-1.2** The system MUST record explicit, granular, withdrawable consent from the user for each notification channel and for any optional processing (for example, automatic last-contact detection). Both consent grant and consent withdrawal MUST be persisted as distinct events, each capturing a server-authoritative timestamp, the affected channel/scope, and the notice version, and each linked to the consent it establishes or revokes. These consent-change events MUST be carried in the tamper-evident audit trail required by SEC-8.1. The effective consent state for any channel at any past instant MUST be derivable from this event history; where it cannot be determined unambiguously, delivery on that channel MUST fail closed per FR-6.2. Verification: for any delivered reminder, the consent history shows an active grant for the chosen channel with no intervening withdrawal at the delivery timestamp.
 - **PRIV-1.3** The system MUST implement data subject rights for the user: access and portability (Articles 15 and 20), rectification (Article 16), erasure (Article 17), restriction (Article 18), and objection (Article 21).
-- **PRIV-1.4** The system MUST provide a documented intake channel for data subject requests originating from a contact (a non-user). At minimum the controlling user MUST be able to erase a contact's data on request. The process for a direct third-party erasure request is recorded as an open decision in Section 14.
+- **PRIV-1.4** The system MUST provide a documented intake channel for data subject requests originating from a contact (a non-user). For MVP the resolved model is **controller-mediated erasure**: the controlling user erases the contact (the FR-1.3 cascade), supported by a documented manual DSR intake channel for direct third-party requests. No automated cross-user purge mechanism is committed for MVP. Any future direct, identity-verified third-party erasure (including cross-user scope) remains an open decision in Section 14 and MUST have DPO/legal sign-off before implementation.
 - **PRIV-1.5** Data export MUST be machine-readable (for example, JSON) and MUST include all personal data held for the requesting user. Verification: an exported file round-trips all contact, category, cadence, consent, and history records.
 - **PRIV-1.6** Erasure MUST be a hard delete that cascades across contacts, reminders, outreach history, derived detection data, and provider tokens. Backups MUST be covered by a documented retention and purge schedule. Verification: an erasure test confirms no personal data for the subject remains in primary storage after completion.
 - **PRIV-1.7** The system MUST enforce data minimization. Only the fields defined in Section 6.4 and the data classes in Section 3 may be stored. Verification: a schema audit shows no personal data fields outside the approved set.
@@ -320,8 +320,21 @@ If LLM-assisted features are added later (for example, drafting outreach text), 
 
 ## 14. Open questions and risks
 
-- The household activity exemption (GDPR Article 2(2)(c)) may shield an end user's purely personal use, but it does not exempt the controller or processor operating the service. The lawful basis and the third-party data subject question require a DPIA and review by a qualified data protection advisor before launch.
-- Direct erasure requests from a contact (a non-user), spanning the data sets of one or more users, are operationally hard. The intake process, identity verification, and the scope of any cross-user purge MUST be decided and documented. Recommendation: start with controller-mediated erasure (the user deletes the contact) plus a manual DSR process.
-- Signal has no sanctioned sending API. Decide whether Signal as a delivery channel is worth the operational and terms-of-service cost, or whether it remains an outreach deep link only.
-- WhatsApp Cloud API session and template constraints affect when a reminder can be delivered to the user. Confirm the opt-in flow before committing to WhatsApp delivery.
-- Decide the hosting region and data residency to bound cross-border transfer obligations.
+Resolved decisions are recorded inline in the relevant requirements and in ARCHITECTURE.md; the items below are what remains open or deferred.
+
+**Still open / deferred (kept visible):**
+
+- **Lawful basis & DPIA — confirmed position, advisor sign-off still required.** The lawful basis is confirmed as legitimate interests (Art. 6(1)(f)) for contact personal data with a documented LIA, and contract (Art. 6(1)(b)) for account data (PRIV-1.1). The household activity exemption (Article 2(2)(c)) may shield an end user's purely personal use but does not exempt the controller/processor operating the service. The DPIA, LIA, and lawful-basis position MUST still be reviewed and signed off by a qualified data protection advisor **before production launch** — this is a standing human gate, not yet cleared.
+- **Direct third-party (contact) erasure beyond controller-mediated.** MVP is resolved to controller-mediated erasure plus a documented manual DSR process (PRIV-1.4). Any future direct, identity-verified third-party erasure spanning one or more users' data sets — intake, identity verification, and cross-user purge scope — remains open and requires DPO/legal sign-off before implementation.
+- **Hosting cloud, region, and data residency — deferred.** Intentionally kept cloud-agnostic for now (see ARCHITECTURE.md). All infrastructure stays behind interfaces defaulting to the most restrictive option. This blocks finalizing processor Data Processing Agreements and the cross-border transfer mechanism (PRIV-1.12); both MUST be resolved before production launch.
+- **SMS provider — deferred.** SMS delivery is in MVP scope (INT-5.1) but the concrete provider is undecided and kept behind the delivery interface; the webhook signature-verification contract is enforced regardless of provider.
+- **Deferred infrastructure (behind interfaces, default-deny):** managed KMS vendor, durable queue/broker, transactional email provider, audit-chain external anchor store, container orchestrator, and the operational alerting destination. Each is tracked as a decision/issue and MUST be resolved with human sign-off before the dependent code path goes to production.
+- **Brand finalization (non-blocking):** exact brand hex values require a color-pick against vector source art before production; font set is resolved to self-hosted open-source faces (Cinzel, Playfair Display, Inter, Poppins).
+
+**Resolved (for reference):**
+
+- **Delivery channels.** SMS, WhatsApp, and Signal delivery are promoted into MVP (FR-6.1, INT-5.x). WhatsApp requires in-WhatsApp opt-in and respects Cloud API session/template constraints; Signal is a self-hosted, best-effort, not-officially-supported channel, off by default.
+- **Contact providers.** Google People, Microsoft Graph, CardDAV, and Apple Contacts (iCloud CardDAV) are all in MVP (FR-1.5, INT-4.1).
+- **Calendar.** Read-only free/busy from Google Calendar is in MVP; event creation is later phase (INT-3.x).
+- **Mailbox detection.** Gmail metadata-only, opt-in, default off, is in MVP (FR-4.3/4.4); DPIA/LIA records the added residual risk.
+- **Database:** PostgreSQL (behind a repository interface). **Push:** standard Web Push with the application's own VAPID keys + RFC 8291 payload encryption. **Post-quantum:** migration-ready classical baseline (TLS 1.3 + crypto-agility + rotation). **Session store:** PostgreSQL-backed, server-side revocable. **CI:** GitHub Actions + OSS scanners behind a provider-agnostic definition. **SBOM:** CycloneDX. **Container base:** official slim, digest-pinned, non-root.
