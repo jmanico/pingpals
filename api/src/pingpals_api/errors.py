@@ -9,6 +9,8 @@ from __future__ import annotations
 from flask import Flask, jsonify
 from werkzeug.exceptions import HTTPException
 
+from .rate_limit import TooManyConcurrent
+
 # Stable, non-disclosing messages keyed by status. No internal detail.
 _GENERIC = {
     400: "bad_request",
@@ -27,6 +29,13 @@ def register_error_handlers(app: Flask) -> None:
         code = exc.code or 500
         resp = jsonify({"error": _GENERIC.get(code, "error")})
         resp.status_code = code
+        return resp
+
+    @app.errorhandler(TooManyConcurrent)
+    def _handle_concurrency(_exc: TooManyConcurrent):  # type: ignore[no-untyped-def]
+        # Per-user concurrency cap exceeded — non-disclosing 429 (issue 024 AC-02/AC-05).
+        resp = jsonify({"error": _GENERIC[429]})
+        resp.status_code = 429
         return resp
 
     @app.errorhandler(Exception)
