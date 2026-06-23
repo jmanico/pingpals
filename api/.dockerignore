@@ -1,0 +1,18 @@
+# Keep secrets, virtualenvs, caches, and test cruft out of the build context (REQ-FND-002)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.env
+.env.*
+*.pem
+*.key
+tests/
+requirements*.in

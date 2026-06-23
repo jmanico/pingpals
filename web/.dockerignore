@@ -1,0 +1,10 @@
+# Keep node_modules/build output/secrets out of the build context (REQ-FND-002)
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+.env
+.env.*
+*.pem
+*.key

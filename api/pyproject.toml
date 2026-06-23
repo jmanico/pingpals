@@ -1,0 +1,61 @@
+# Pingpals Flask API — package manifest (REQ-FND-001)
+#
+# Dependency policy (REQ-FND-001 AC-02, REQ-FND-004 / SEC-9.1, SEC-9.3):
+#   - Runtime deps are deliberately minimal and contain NO library that resolves a
+#     `TO BE DECIDED` infrastructure choice: no concrete DB driver, queue/broker client,
+#     KMS vendor SDK, or cloud SDK is committed here. Those stay behind interfaces and
+#     are introduced only when their DECISION issue (ARCHITECTURE.md) is resolved.
+#   - Exact versions are pinned; integrity-hash-verified install is enforced via
+#     requirements.lock.txt (`pip install --require-hashes`) in CI and Docker (REQ-FND-004).
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pingpals-api"
+version = "0.1.0"
+description = "Pingpals Flask/REST API — single-user relationship-cadence reminder service"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+# Runtime dependencies — pinned exactly. Hashes live in requirements.lock.txt.
+# `cryptography` is a general-purpose crypto primitive provider (REQ-FND-006 AES-256-GCM
+# reference provider) — NOT a KMS vendor SDK; the managed-KMS choice stays behind an interface.
+dependencies = [
+    "flask==3.1.3",
+    "cryptography==48.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.4.2",
+    "pytest-cov==7.0.0",
+    "ruff==0.13.1",
+    "bandit==1.8.6",
+    "pip-audit==2.9.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pingpals_api"]
+
+# ---- Tooling config (consumed by REQ-FND-003 CI gates) ----
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--cov=pingpals_api --cov-report=term-missing --cov-report=xml --cov-fail-under=80"
+
+[tool.coverage.run]
+source = ["pingpals_api"]
+branch = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Security-relevant lint families: pyflakes(F), bugbear(B), bandit-via-ruff(S), isort(I)
+select = ["E", "F", "B", "S", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # asserts are expected in tests
