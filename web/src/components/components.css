@@ -1,0 +1,69 @@
+/* Base component styles — token-driven only (issue 075, DESIGN §7.1). No hard-coded hex/px. */
+
+.pp-button {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body);
+  color: var(--color-white);
+  background: var(--color-purple-700);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-lg);
+  cursor: pointer;
+}
+.pp-button:hover {
+  background: var(--color-purple-500);
+}
+.pp-button--gold {
+  /* Single hero/premium CTA: gold fill with deep-purple label (gold text on light fails contrast). */
+  background: var(--color-gold-500);
+  color: var(--color-purple-900);
+}
+
+/* Visible Gilt focus ring on every interactive element — never removed (DESIGN §7, AC-05). */
+.pp-button:focus-visible,
+.pp-input:focus-visible,
+.pp-link:focus-visible {
+  outline: 3px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+.pp-card {
+  background: var(--color-white);
+  color: var(--color-text-body);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.pp-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-family: var(--font-family-body);
+  color: var(--color-text-body);
+}
+.pp-input {
+  font-size: var(--font-size-body);
+  padding: var(--space-sm);
+  border: 1px solid var(--color-purple-500);
+  border-radius: var(--radius-sm);
+}
+.pp-field__error {
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+}
+
+/* Status is never conveyed by colour alone — icon + label accompany the colour (AC-04). */
+.pp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-small);
+}
+.pp-status--success { color: var(--color-success); }
+.pp-status--warning { color: var(--color-purple-900); }
+.pp-status--danger { color: var(--color-danger); }
+
+.pp-link {
+  color: var(--color-purple-700);
+  text-decoration: underline;
+}
