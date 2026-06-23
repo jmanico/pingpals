@@ -13,7 +13,7 @@
 
 Pingpals nudges a single user to maintain contact with people they choose to track, at a cadence they define per relationship.
 
-The system does not act as the user on third-party platforms. It delivers the reminder to the user and hands them a one-tap action to open the conversation in their own messaging app. This boundary is a deliberate design control: it minimizes personal data exposure, third-party API surface, and platform terms-of-service risk, and it materially simplifies the lawful-basis analysis under GDPR.
+The system does not act as the user on third-party platforms. It delivers the reminder to the user and hands them a one-tap action to open the conversation in their own messaging app. This boundary minimizes personal-data exposure, third-party API surface, platform terms-of-service risk, and GDPR lawful-basis complexity.
 
 ---
 
@@ -159,13 +159,13 @@ All third-party integrations MUST conform to RFC 9700 (OAuth 2.0 Security Best C
 
 - **INT-5.1** SMS delivery MUST verify inbound webhook signatures from the SMS provider before processing any callback.
 - **INT-5.2** WhatsApp delivery to the user requires the user to have opted in within WhatsApp, and MUST respect the session and template message constraints of the WhatsApp Cloud API.
-- **INT-5.3** Signal has no sanctioned multi-tenant sending API. Signal delivery, if implemented, MUST be treated as a self-hosted single-user integration (for example, signal-cli on infrastructure the user controls), MUST be labeled best effort, and MUST NOT be presented as an officially supported channel. This constraint is recorded in Section 14.
+- **INT-5.3** Signal has no sanctioned multi-tenant sending API. Signal delivery, if implemented, MUST be treated as a self-hosted single-user integration (e.g. signal-cli on infrastructure the user controls), MUST be labeled best effort, and MUST NOT be presented as an officially supported channel (see §14).
 
 ---
 
 ## 7. Privacy and GDPR requirements (PRIV)
 
-Pingpals processes personal data of third-party data subjects (the contacts) who are not users of the system. This creates specific obligations beyond ordinary account data handling.
+Pingpals processes personal data of third-party data subjects (the contacts) who are not users, creating obligations beyond ordinary account-data handling.
 
 - **PRIV-1.1** The controller MUST document a lawful basis for processing contact personal data. The expected basis is legitimate interests under Article 6(1)(f), supported by a documented Legitimate Interests Assessment. User account data is processed under contract, Article 6(1)(b).
 - **PRIV-1.2** The system MUST record explicit, granular, withdrawable consent from the user for each notification channel and for any optional processing (for example, automatic last-contact detection). Consent records MUST capture timestamp, scope, and notice version.
@@ -186,7 +186,7 @@ Pingpals processes personal data of third-party data subjects (the contacts) who
 
 ## 8. Security requirements (SEC)
 
-The architecture follows Zero Trust per NIST SP 800-207 and fails closed by default. No request is trusted on the basis of network location.
+Zero Trust per NIST SP 800-207, fail-closed by default; no request is trusted on the basis of network location.
 
 ### 8.1 Authentication
 
@@ -237,7 +237,7 @@ The architecture follows Zero Trust per NIST SP 800-207 and fails closed by defa
 ### 8.9 Dependency and supply chain
 
 - **SEC-9.1** Third-party dependencies MUST be minimized. Each new dependency MUST be vetted for known CVEs, maintenance status, and transitive dependency footprint before introduction.
-- **SEC-9.2** CI MUST run software composition analysis and static analysis. Builds MUST fail on newly introduced high-severity findings. (TEST-1.6 is the operative, fuller CI-gate list — SAST, SCA, secret scanning, and dependency checks — of which this is a subset.)
+- **SEC-9.2** CI MUST run software composition analysis and static analysis. Builds MUST fail on newly introduced high-severity findings. See TEST-1.6 for the full CI-gate list.
 - **SEC-9.3** A software bill of materials MUST be generated, and dependency versions MUST be pinned with integrity verification.
 
 ---

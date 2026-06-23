@@ -8,21 +8,17 @@
 **Companion documents:** [REQUIREMENTS.md](./REQUIREMENTS.md) (what the system must do), [ARCHITECTURE.md](./ARCHITECTURE.md) (how it is built), [DESIGN.md](./DESIGN.md) (look and feel).
 **Primary references:** OWASP Top 10 Proactive Controls, OWASP Cheat Sheet Series, OWASP API Security Top 10, OWASP REST Security Cheat Sheet, OWASP AISVS, and the standards already anchored in REQUIREMENTS.md §13 (RFC 9700, RFC 9068, NIST SP 800-207, NIST SP 800-53 Rev. 5, GDPR, FIPS 203, TLS 1.3).
 
-> This is the secure-coding contract for any code added to this repository. **REQUIREMENTS.md
-> remains the source of truth; where this document and REQUIREMENTS.md disagree, REQUIREMENTS.md
-> wins.** Rules paraphrase their sources — consult the cited requirement tag or reference for full
-> detail before relying on an edge case.
+> Secure-coding contract for all code in this repository. **REQUIREMENTS.md is the source of
+> truth; on any conflict, REQUIREMENTS.md wins.** Rules paraphrase their sources — consult the
+> cited tag/reference for edge cases.
 
 ---
 
 ## How To Use This File
 
-- Treat every rule as a default-deny invariant: if you cannot satisfy it, stop and fail closed
-  rather than ship the weaker path.
-- Each rule is tagged with the requirement it compresses (e.g. `SEC-2.2`, `FR-6.4`, `PRIV-1.6`) or
-  the external standard it derives from. Tags are the lookup key back into REQUIREMENTS.md.
-- Where the stack is not yet decided, rules carry `TO BE DECIDED` forward rather than guessing.
-  Do not invent infrastructure choices to satisfy a rule; raise the open input instead.
+- Every rule is a default-deny invariant: if you cannot satisfy it, fail closed rather than ship the weaker path.
+- Each rule is tagged with the requirement it compresses or the standard it derives from; tags are the lookup key into REQUIREMENTS.md.
+- For undecided stack choices, keep `TO BE DECIDED` and raise the open input rather than inventing infrastructure.
 
 ---
 
@@ -43,18 +39,14 @@ are authored here:
   launch are mandatory (REQUIREMENTS.md §7).
 - **Packaging:** Docker container image, cloud-portable (ARCHITECTURE.md).
 
-Infrastructure decisions (database engine, queue/broker, push provider, KMS vendor,
-hosting/region/residency, orchestration, hybrid post-quantum key exchange) are owned by
-ARCHITECTURE.md and remain `TO BE DECIDED`. Until each is resolved, code MUST keep the choice behind
-an interface and default to the most restrictive option. Direct third-party (contact) erasure intake
-and identity verification is an open decision tracked under `PRIV-1.4` (REQUIREMENTS.md §14).
+Infrastructure decisions (database, queue/broker, push provider, KMS, hosting/region/residency,
+orchestration, hybrid PQ key exchange) are owned by ARCHITECTURE.md and remain `TO BE DECIDED`;
+until resolved, code MUST keep the choice behind an interface and default to the most restrictive
+option.
 
 ---
 
 ## Provisional Security Rules
-
-Grouped by priority area. Rules are imperative and durable; they are safe to follow before any
-infrastructure is chosen.
 
 ### 1. HTTP boundary
 
@@ -154,10 +146,9 @@ infrastructure is chosen.
 
 - Third-party dependencies MUST be **minimized and vetted** (CVE history, maintenance, transitive
   footprint) before introduction (`SEC-9.1`, ARCH Rule 10).
-- CI MUST run the full **TEST-1.6** gate set — **SAST, SCA, secret-scanning, and dependency
-  checks** — and MUST **block merge** on failure or on newly introduced high-severity findings.
-  `TEST-1.6` is the canonical, operative gate list; `SEC-9.2`'s narrower "SCA and static analysis"
-  is a subset of it.
+- CI MUST run the full **TEST-1.6** gate set — **SAST, SCA, secret-scanning, dependency checks** —
+  and MUST **block merge** on failure or newly introduced high-severity findings (`TEST-1.6` is
+  canonical; `SEC-9.2` is a subset).
 - Generate an **SBOM**; pin dependency versions with **integrity verification** (`SEC-9.3`).
 - **Docker image hardening:** run as a **non-root** user, use a minimal/pinned base image, install no
   build toolchain into the runtime layer, bake in no secrets, and keep the image free of debug
@@ -219,11 +210,7 @@ infrastructure is chosen.
 
 ## Open Security Items
 
-- The infrastructure `TO BE DECIDED` inputs owned by ARCHITECTURE.md must be resolved before the
-  corresponding rules can move from provisional to enforced.
-- **DPIA** (Art. 35) and a documented **Legitimate Interests Assessment** before production launch —
-  required of record by `PRIV-1.11` (REQUIREMENTS.md §14).
-- Direct third-party (contact) erasure intake and identity verification — open decision of record at
-  `PRIV-1.4` (REQUIREMENTS.md §14).
-- Hosting region / data residency and cross-border transfer obligations — `PRIV-1.12`
-  (REQUIREMENTS.md §14).
+Open items are of record in REQUIREMENTS.md §14: infrastructure `TO BE DECIDED` inputs
+(ARCHITECTURE.md); DPIA + Legitimate Interests Assessment before launch (`PRIV-1.11`); direct
+third-party erasure intake and identity verification (`PRIV-1.4`); hosting region / data residency
+and cross-border transfer (`PRIV-1.12`).

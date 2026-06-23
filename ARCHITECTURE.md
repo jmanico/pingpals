@@ -6,16 +6,13 @@
 **Status:** Provisional (bootstrap — no implementation exists yet)
 **Companion documents:** [REQUIREMENTS.md](./REQUIREMENTS.md) (what the system must do), [DESIGN.md](./DESIGN.md) (look and feel)
 
-> Unknowns are kept visible as `TO BE DECIDED` rather than guessed. REQUIREMENTS.md remains the source of truth; where this document and REQUIREMENTS.md disagree, REQUIREMENTS.md wins.
+> `TO BE DECIDED` marks undecided choices. REQUIREMENTS.md is the source of truth and wins on any conflict.
 
 ---
 
 ## Required Architecture Inputs
 
-> Product context (purpose, boundary, use cases, actors, scale) is owned by REQUIREMENTS.md
-> §1, §2, §4, §5, §10; brand/visual design by DESIGN.md §1–§7; security posture by SECURITY.md
-> (requirements of record: REQUIREMENTS.md §7–§8). This block lists only the technology choices
-> this document owns.
+> Product context: REQUIREMENTS.md §1,§2,§4,§5,§10. Brand: DESIGN.md §1–§7. Security: SECURITY.md (of record: REQUIREMENTS.md §7–§8). Below: only the tech choices this document owns.
 
 ```
 Runtime environment: web application
@@ -37,17 +34,14 @@ Deployment model: Docker container (cloud-portable; runs on many clouds). Specif
 
 ## Initial Architecture (Provisional)
 
-A client-only React 19 SPA talking over REST/TLS 1.3 to a Flask API. The API is the single
-trust boundary: every request is authorized per-request against the authenticated user and
-fails closed. An internal Scheduler evaluates cadence and enqueues reminders to a delivery
-worker. All third-party access is least-privilege OAuth. Outreach never leaves the user's
-own device — the API only ever returns a validated deep link for the client to open.
+A client-only React 19 SPA over REST/TLS 1.3 to a Flask API, the single trust boundary
+(per-request authz, fail closed). An internal Scheduler evaluates cadence and enqueues
+reminders to a Delivery worker. Third-party access is least-privilege OAuth. Outreach never
+leaves the user's device: the API returns only a validated deep link for the client to open.
 
 **Components (logical, not a file layout):**
 
-Control rules are authored in SECURITY.md and tracked by the REQUIREMENTS.md tags in
-parentheses; each component below lists its responsibilities by reference rather than
-re-authoring the rules.
+Control rules live in SECURITY.md; tags in parentheses are the REQUIREMENTS.md lookup.
 
 - **Web client (React 19 SPA).** Client-only, no SSR. Validates input and API responses,
   sanitizes every `href`/`src`, enforces strict CSP, and consumes DESIGN.md tokens for all
@@ -81,7 +75,6 @@ re-authoring the rules.
   managed key store (app code holds no raw key material); crypto-agile and rotatable;
   tamper-evident append-only/hash-chained audit log (SEC-3.1, SEC-5.2, SEC-5.3, SEC-8.x —
   see SECURITY.md §5, §6).
-- **Packaging.** Docker container image, cloud-portable.
 
 ```
 [React 19 SPA] --REST/TLS1.3--> [Flask API] --+--> [AuthN/Session: OIDC + passkey/MFA]
@@ -146,9 +139,7 @@ re-authoring the rules.
 
 ## Dependency Rules
 
-Directional dependency constraints — who may depend on whom. The control rules they enforce
-are authored in SECURITY.md (and tracked by the REQUIREMENTS.md tags shown); these rules state
-only the architecture-specific direction.
+Directional dependency constraints (who may depend on whom). Control rules are authored in SECURITY.md; tags shown are the REQUIREMENTS.md lookup.
 
 1. **Client depends on the API for all authority.** The React client makes no authorization or
    data-scoping decisions; it presents what the API returns (SEC-2.x — see SECURITY.md §3).
