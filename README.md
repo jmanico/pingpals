@@ -87,15 +87,24 @@ pingpals/
 
 ## Build status
 
-Bootstrap is underway, one spec-traced issue at a time. ✅ done · ⏳ in progress · ⬜ planned
+All MVP issues (#12–79) are implemented, spec-traced, and merged. ✅ done · ⬜ deferred
 
 | Area | Status |
 | --- | --- |
 | Foundations — monorepo, Docker, CI, SBOM, design tokens, crypto-agility | ✅ |
-| Backend — Flask app factory + hardened HTTP boundary | ✅ |
-| Backend — validation, authz, CSRF, persistence, KMS, audit, rate-limit | ⏳ |
-| Auth — OIDC SSO, sessions, WebAuthn/passkey, OAuth baseline | ⬜ |
-| Contacts · Engine · Delivery · Privacy/DSR · Frontend | ⬜ |
+| Backend — app factory, HTTP boundary, validation, authz, CSRF, persistence, KMS, audit, rate-limit, internal authn | ✅ |
+| Auth — OIDC SSO, ID-token validation, sessions, WebAuthn/passkey, OAuth adapter, account linking | ✅ |
+| Contacts — CRUD, cascade delete, categories, cadence, last-contact, quotas, Google import | ✅ |
+| Engine — scheduler, generation cap, reminder actions, consent enforcement | ✅ |
+| Delivery — worker, payload confidentiality, endpoints, email, web push, anti-spoofing, outreach links, prefs, retry/DLQ | ✅ |
+| Privacy/DSR — consent store, export, erasure + proof, DSR, retention, RoPA/DPIA/LIA | ✅ |
+| Frontend — SPA scaffold, URL validator, Zod, API client, components, all screens | ✅ |
+| Testing — harness, security/privacy/engine suites, ≥80% coverage gate | ✅ |
+| Infrastructure decisions (KMS vendor, queue/broker, hosting/region, …) | ⬜ deferred (human sign-off) |
+| Later phases (extra providers, calendar events, SMS/WhatsApp/Signal, mailbox detection) | ⬜ deferred |
+
+**302 tests pass** (263 API · 39 web) at ~95% API coverage. Concrete infrastructure stays behind
+fail-closed interfaces until each `[DECISION]` issue is resolved with human sign-off.
 
 ## Developer quickstart
 
