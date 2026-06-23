@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from flask import Flask
 
+from .audit.log import TamperEvidentAuditLog
+from .authz import register_authorization
 from .config import (
     MIN_SECRET_KEY_LENGTH,
     SECRET_KEY_NAME,
@@ -22,6 +24,7 @@ from .csrf import register_csrf
 from .errors import register_error_handlers
 from .http_boundary import register_http_boundary
 from .limits import register_body_limit
+from .rate_limit import register_rate_limiting
 
 
 class StartupError(RuntimeError):
@@ -57,9 +60,16 @@ def create_app(config: Config | None = None, secret_store: SecretStore | None = 
     if not app.jinja_env.autoescape:
         raise StartupError("Jinja autoescaping must remain enabled (SEC-4.2)")
 
+    # Tamper-evident audit log (issue 023) — the sink for authz denials and crypto decrypt events.
+    audit = TamperEvidentAuditLog()
+    app.extensions["pingpals_audit"] = audit
+
     register_http_boundary(app)
+    register_rate_limiting(app)  # default-deny baseline; runs early, before handlers
     register_body_limit(app)
     register_csrf(app)
+    # Until the auth tier wires a real resolver, the principal is None and protected routes deny.
+    register_authorization(app, principal_provider=lambda: None, audit=audit)
     register_error_handlers(app)
     _register_blueprints(app)
     return app
