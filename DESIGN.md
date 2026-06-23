@@ -100,7 +100,7 @@ The logo uses a classical, high-contrast serif for the wordmark and a clean huma
 
 | Role | Typeface (recommended) | Notes |
 | --- | --- | --- |
-| **Display / wordmark** | Cinzel (or Trajan Pro) | All-caps, classical Roman serif matching the logo. Headlines, hero, brand moments only. |
+| **Display / wordmark** | Cinzel | All-caps, classical Roman serif matching the logo. Headlines, hero, brand moments only. (Resolved: Cinzel, self-hosted SIL OFL — the proprietary Trajan Pro alternative is dropped to keep the font set open-licensed and CSP-friendly.) |
 | **Headings** | Playfair Display | High-contrast serif; warmer than the all-caps display for in-product headings. |
 | **Body / UI** | Inter | Highly legible, variable, excellent at small sizes; the workhorse for app text. |
 | **Accent / friendly** | Poppins | Optional rounded geometric sans for the tagline and playful microcopy. |
@@ -109,7 +109,7 @@ The logo uses a classical, high-contrast serif for the wordmark and a clean huma
 
 - Display serif is **all caps with generous letter-spacing**, used sparingly — it is seasoning, not body copy.
 - Body text is sentence case, Inter, with comfortable line-height (≈1.5) for readability.
-- Use web fonts loaded with Subresource Integrity per REQUIREMENTS.md **FE-1.8**, or self-host to satisfy the strict CSP (**FE-1.4**). Provide robust system-font fallbacks.
+- **Resolved:** the type set (Cinzel, Playfair Display, Inter, Poppins — all SIL OFL) is **self-hosted** to satisfy the strict CSP without external origins (**FE-1.4**), rather than loaded from a third-party CDN. Provide robust system-font fallbacks.
 
 ### 4.2 Suggested type scale (rem)
 
@@ -181,7 +181,7 @@ Ship the palette, type scale, spacing, and radii as a single source-of-truth tok
 
 ## 9. Open questions
 
-- **Exact brand hex values:** the palette above is sampled approximately from the raster logo and must be confirmed against vector source art.
-- **Font licensing:** confirm licensing for Cinzel/Trajan/Playfair/Inter/Poppins for web and app embedding, or finalize self-hosted equivalents.
-- **Mascot expression set:** decide whether King Ping gets multiple expressions (sleeping, alert, celebrating) for use across states.
-- **Dark mode:** define a royal dark theme (deep purple canvas, gold/cream text) once the light system is locked.
+- **Exact brand hex values (still open, non-blocking):** the palette above is sampled approximately from the raster logo. Tokens ship by name with these values as **provisional**; a color-pick against vector source art is required before production but does not block token/UI work.
+- **Font licensing (resolved):** the set is **Cinzel, Playfair Display, Inter, and Poppins — all SIL OFL — self-hosted**. Trajan Pro is dropped (proprietary). No external font CDN.
+- **Mascot expression set (resolved):** King Ping gets a **small expression set (~3: sleeping, alert, celebrating)** for empty / onboarding / success states, beyond the MVP single mascot mark in §2.1.
+- **Dark mode (resolved — deferred):** structure design tokens so a royal dark theme (deep-purple canvas, gold/cream text) can be added later **without** committing one now; MVP ships the light (Parchment) theme only.
