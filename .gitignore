@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Pingpals .gitignore (REQ-FND-001 AC-03: secrets/artifacts must be unstageable)
+# ---------------------------------------------------------------------------
+
+# Secrets / credentials / key material — MUST never be committed (SEC-3.2)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.crt
+secrets/
+**/secrets/
+
+# Python (API module)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Node / React 19 SPA (web module)
+node_modules/
+**/node_modules/
+web/dist/
+web/build/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+yarn-error.log*
+
+# SBOM / scan outputs (regenerated in CI — see REQ-FND-003/004)
+sbom-*.json
+*.sarif
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

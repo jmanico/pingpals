@@ -1,0 +1,30 @@
+{
+  "name": "pingpals-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pingpals React 19 client-only SPA (no SSR, function components + hooks)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "typescript": "5.7.3",
+    "vite": "6.4.3",
+    "vitest": "3.2.6"
+  }
+}
