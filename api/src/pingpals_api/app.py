@@ -18,8 +18,10 @@ from .config import (
     ProductionConfig,
     SecretStore,
 )
+from .csrf import register_csrf
 from .errors import register_error_handlers
 from .http_boundary import register_http_boundary
+from .limits import register_body_limit
 
 
 class StartupError(RuntimeError):
@@ -56,6 +58,8 @@ def create_app(config: Config | None = None, secret_store: SecretStore | None = 
         raise StartupError("Jinja autoescaping must remain enabled (SEC-4.2)")
 
     register_http_boundary(app)
+    register_body_limit(app)
+    register_csrf(app)
     register_error_handlers(app)
     _register_blueprints(app)
     return app
