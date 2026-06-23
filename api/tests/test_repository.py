@@ -10,8 +10,10 @@ from pingpals_api.persistence.entities import (
     Classification,
 )
 from pingpals_api.persistence.repository import (
+    WRITE_PROTECTED_ENTITIES,
     InMemoryRepository,
     UnknownEntityError,
+    WriteAccessDenied,
     assert_no_cross_user,
 )
 
@@ -33,12 +35,21 @@ def test_owner_scoped_crud_roundtrip() -> None:
 
 
 def test_cross_user_access_is_not_found_for_every_owned_entity() -> None:
-    # AC-02 / SEC-2.2: B can never read A's row, for every owner-scoped entity.
+    # AC-02 / SEC-2.2: B can never read A's row, for every writable owner-scoped entity.
     for entity in OWNER_SCOPED_ENTITIES:
+        if entity in WRITE_PROTECTED_ENTITIES:
+            continue  # audit log is written only via its segregated subsystem (issue 023)
         repo = InMemoryRepository()
         assert assert_no_cross_user(repo, entity, "user-A", "user-B", "x1", {"v": 1}) is True
         assert repo.update("user-B", entity, "x1", {"v": 2}) is None
         assert repo.delete("user-B", entity, "x1") is False
+
+
+def test_audit_log_not_writable_via_normal_data_path() -> None:
+    # SEC-8.5 / issue 023 AC-06: write access to audit storage is segregated.
+    repo = InMemoryRepository()
+    with pytest.raises(WriteAccessDenied):
+        repo.add("user-A", "audit_log_entry", "a1", {"action": "x"})
 
 
 def test_owner_id_is_structurally_required() -> None:

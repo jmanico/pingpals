@@ -17,9 +17,17 @@ from typing import Any, Protocol
 
 from .entities import OWNER_SCOPED_ENTITIES
 
+#: The audit log is written ONLY through its segregated subsystem (issue 023), never the normal
+#: application data path — write access is segregated (SEC-8.5, AC-06).
+WRITE_PROTECTED_ENTITIES: frozenset[str] = frozenset({"audit_log_entry"})
+
 
 class UnknownEntityError(KeyError):
     """Raised when an entity name is not part of the owner-scoped schema."""
+
+
+class WriteAccessDenied(PermissionError):
+    """Raised when the normal data path attempts to write a segregated entity (e.g. audit log)."""
 
 
 class Repository(Protocol):
@@ -48,8 +56,14 @@ class InMemoryRepository(Repository):
         if entity not in OWNER_SCOPED_ENTITIES:
             raise UnknownEntityError(entity)
 
+    @staticmethod
+    def _check_writable(entity: str) -> None:
+        if entity in WRITE_PROTECTED_ENTITIES:
+            raise WriteAccessDenied(entity)  # segregated audit storage (SEC-8.5)
+
     def add(self, owner_id: str, entity: str, record_id: str, data: dict) -> dict:
         self._check_entity(entity)
+        self._check_writable(entity)
         if not owner_id:
             raise ValueError("owner_id is required")
         # Owner is taken from the caller, never from the body (AC-05): a body owner_id is ignored.
@@ -70,6 +84,7 @@ class InMemoryRepository(Repository):
 
     def update(self, owner_id: str, entity: str, record_id: str, changes: dict) -> dict | None:
         self._check_entity(entity)
+        self._check_writable(entity)
         scope = self._data.get(entity, {}).get(owner_id, {})
         row = scope.get(record_id)
         if row is None:
@@ -82,6 +97,7 @@ class InMemoryRepository(Repository):
 
     def delete(self, owner_id: str, entity: str, record_id: str) -> bool:
         self._check_entity(entity)
+        self._check_writable(entity)
         scope = self._data.get(entity, {}).get(owner_id, {})
         return scope.pop(record_id, None) is not None
 
